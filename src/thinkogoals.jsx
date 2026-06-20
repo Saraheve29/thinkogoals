@@ -3362,7 +3362,7 @@ function Home({setScreen}){
         position:"sticky",top:0,zIndex:50,
       }}>
         <div style={{fontFamily:"Georgia,serif",fontSize:30,fontWeight:700,color:"#1A1A10",letterSpacing:-0.5,display:"inline-flex",alignItems:"center",gap:10}}>
-          ThinkoGoals <span style={{fontSize:24}}>🦔</span>
+          ThinkoGoals <img src="/image.png" alt="Thinko the Hedgehog" style={{width:34,height:34,borderRadius:10,objectFit:"cover"}}/>
         </div>
         <div style={{fontSize:13,color:"#5A4A30",marginTop:4,fontWeight:500}}>Think it · Plan it · Live it</div>
       </div>
