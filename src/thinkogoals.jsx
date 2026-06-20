@@ -113,6 +113,7 @@ function InstallAppButton(){
 /* ── Bottom nav — 4 sections ─────────────────────────────── */
 function NavBar({ current, setScreen }) {
   const NAV = [
+    {id:"home",     icon:"🏠", name:"Home"},
     {id:"goals",    icon:"🎯", name:"Goals"},
     {id:"mindmap",  icon:"🧠", name:"Mind Map"},
     {id:"charge",   icon:"⚡", name:"Wipe Out"},
@@ -450,10 +451,6 @@ function Goals({data,setData,setScreen,onSendToWipeOut}){
         <div style={{fontFamily:"Georgia,serif",fontSize:28,fontWeight:700,color:"#1A1A10",letterSpacing:-0.5,display:"inline-flex",alignItems:"center",gap:10}}>
           Smart Goals <span style={{fontSize:22}}>♥</span>
         </div>
-      </div>
-
-      <div style={{padding:"12px 0 0"}}>
-        <InstallAppButton/>
       </div>
 
       <div style={{padding:"18px 20px 8px"}}>
@@ -803,7 +800,7 @@ function MindMap({data,setData,setGoalsData,onSendToWipeOut,setScreen}) {
 
   return (
     <div style={{minHeight:"100vh",background:"transparent",fontFamily:"'Segoe UI',sans-serif",paddingBottom:90}}>
-      <Header title="Mind Map" onBack={()=>setScreen("goals")} right={
+      <Header title="Mind Map" onBack={()=>setScreen("home")} right={
         <button onClick={()=>setAdding(true)} style={{background:"#5A7848",color:"#fff",border:"none",borderRadius:50,width:40,height:40,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,boxShadow:"0 3px 12px rgba(58,80,38,0.35)"}}>+</button>
       }/>
       <div style={{padding:"20px 16px"}}>
@@ -3301,7 +3298,7 @@ function DecisionScreen({setScreen}){
     <div style={{position:"relative",zIndex:10,minHeight:"100vh"}}>
       <div style={{background:MULTI,backdropFilter:"blur(16px)",padding:"14px 18px 0",borderBottom:"1px solid rgba(180,160,140,0.35)",position:"sticky",top:0,zIndex:50}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-          <button onClick={()=>setScreen("goals")} style={{background:"none",border:"none",cursor:"pointer",width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <button onClick={()=>setScreen("home")} style={{background:"none",border:"none",cursor:"pointer",width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9l8 8" stroke="#2A1A08" strokeWidth="2.2" strokeLinecap="round"/></svg>
           </button>
           <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:20,color:"#2A1A08",flex:1}}>Decision Maker</div>
@@ -3327,10 +3324,94 @@ function DecisionScreen({setScreen}){
 }
 
 /* ═══════════════════════════════════════════════════════
+   🏠 HOME — draggable tile hub for the 4 sections
+═══════════════════════════════════════════════════════ */
+const HOME_TILES=[
+  {id:"goals",   icon:"🎯", name:"Goals",    summary:"Plan your future, step by step", color:"#5A7848"},
+  {id:"mindmap", icon:"🧠", name:"Mind Map",  summary:"Branch out your ideas",          color:"#6A5870"},
+  {id:"charge",  icon:"⚡", name:"Wipe Out",  summary:"Tackle what you've avoided",     color:"#C03010"},
+  {id:"decision",icon:"🎲", name:"Decide",    summary:"Spin, flip, or deep analyse",    color:"#4870A0"},
+];
+
+function Home({setScreen}){
+  const [tileOrder,setTileOrderRaw]=useState(()=>{
+    try{const s=localStorage.getItem('thinkogoals_tile_order');return s?JSON.parse(s):null;}catch{return null;}
+  });
+  const [dragTile,setDragTile]=useState(null);
+  const [dragOverTile,setDragOverTile]=useState(null);
+  const saveTileOrder=o=>{setTileOrderRaw(o);try{localStorage.setItem('thinkogoals_tile_order',JSON.stringify(o));}catch{}};
+
+  const orderedTiles=tileOrder
+    ? tileOrder.map(id=>HOME_TILES.find(t=>t.id===id)).filter(Boolean).concat(HOME_TILES.filter(t=>!tileOrder.includes(t.id)))
+    : HOME_TILES;
+
+  const onTileDrop=(toId)=>{
+    if(!dragTile||dragTile===toId)return;
+    const ids=orderedTiles.map(t=>t.id);
+    const fi=ids.indexOf(dragTile),ti=ids.indexOf(toId);
+    ids.splice(fi,1);ids.splice(ti,0,dragTile);
+    saveTileOrder(ids);
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:"transparent",fontFamily:"'Segoe UI',sans-serif",paddingBottom:90}}>
+      <div style={{
+        background:MULTI,backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
+        padding:"26px 20px 20px",textAlign:"center",
+        borderBottom:"1px solid rgba(90,80,60,0.08)",
+        position:"sticky",top:0,zIndex:50,
+      }}>
+        <div style={{fontFamily:"Georgia,serif",fontSize:30,fontWeight:700,color:"#1A1A10",letterSpacing:-0.5,display:"inline-flex",alignItems:"center",gap:10}}>
+          ThinkoGoals <span style={{fontSize:24}}>🦔</span>
+        </div>
+        <div style={{fontSize:13,color:"#5A4A30",marginTop:4,fontWeight:500}}>Think it · Plan it · Live it</div>
+      </div>
+
+      <div style={{padding:"12px 0 0"}}>
+        <InstallAppButton/>
+      </div>
+
+      <div style={{padding:"18px 16px 8px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        {orderedTiles.map(t=>(
+          <div key={t.id}
+            draggable
+            onDragStart={()=>setDragTile(t.id)}
+            onDragOver={e=>{e.preventDefault();setDragOverTile(t.id);}}
+            onDragLeave={()=>setDragOverTile(null)}
+            onDrop={()=>{onTileDrop(t.id);setDragTile(null);setDragOverTile(null);}}
+            onDragEnd={()=>{setDragTile(null);setDragOverTile(null);}}
+            onClick={()=>setScreen(t.id)}
+            style={{
+              background:dragOverTile===t.id?"rgba(90,120,72,0.15)":MULTI,
+              borderRadius:22,padding:"20px 16px",
+              border:`1.5px solid ${dragOverTile===t.id?"rgba(90,120,72,0.40)":"rgba(255,255,255,0.7)"}`,
+              boxShadow:"0 4px 16px rgba(60,70,40,0.12)",
+              cursor:"grab",textAlign:"center",
+              display:"flex",flexDirection:"column",alignItems:"center",gap:8,
+              transition:"background 0.15s",
+            }}>
+            <span style={{fontSize:40}}>{t.icon}</span>
+            <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:16,color:"#1A1A10"}}>{t.name}</div>
+            <div style={{fontSize:11,color:"#5A4A30",opacity:0.8,lineHeight:1.3}}>{t.summary}</div>
+            <div style={{width:32,height:3,borderRadius:2,background:t.color,marginTop:2}}/>
+          </div>
+        ))}
+      </div>
+
+      <div style={{padding:"6px 20px",textAlign:"center",fontSize:11,color:"rgba(90,80,60,0.5)"}}>
+        Press and drag a tile to reorder
+      </div>
+
+      <NavBar current="home" setScreen={setScreen}/>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
    APP — top-level screen router + shared persisted state
 ═══════════════════════════════════════════════════════ */
 export default function ThinkoGoalsApp(){
-  const [screen,setScreen]=useState("goals");
+  const [screen,setScreen]=useState("home");
 
   const [goalsData,setGoalsData]=useState(()=>{
     try{return JSON.parse(localStorage.getItem('thinkogoals_goals')||'[]');}catch{return [];}
@@ -3356,6 +3437,7 @@ export default function ThinkoGoalsApp(){
 
   return(
     <div style={{minHeight:"100vh",background:"#F0EBE0"}}>
+      {screen==="home"&&<Home setScreen={setScreen}/>}
       {screen==="goals"&&<Goals data={goalsData} setData={setGoalsData} setScreen={setScreen} onSendToWipeOut={sendToWipeOut}/>}
       {screen==="mindmap"&&<MindMap data={mapData} setData={setMapData} setGoalsData={setGoalsData} onSendToWipeOut={sendToWipeOut} setScreen={setScreen}/>}
       {screen==="charge"&&<TheCharge setScreen={setScreen}/>}
