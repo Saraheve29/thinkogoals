@@ -3,6 +3,24 @@ import { useState, useEffect, useRef } from "react";
 // ThinkoGoals — Goals · Mind Map · Wipe Out · Decision Maker
 // Extracted from Thinko Pro. Standalone mini-app, self-contained (no To Do List / Matrix cross-links).
 
+/* ── PWA INSTALL PROMPT ─────────────────────────────────── */
+let deferredInstallPrompt = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+  });
+}
+const showInstallPrompt = async () => {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    return outcome === "accepted";
+  }
+  return false;
+};
+
 /* ═══════════════════════════════════════════════════════
    THEME
 ═══════════════════════════════════════════════════════ */
@@ -57,6 +75,37 @@ function PurpleBtn({ children, onClick, style={}, small=false }) {
     <button onClick={onClick} style={{ background:btnGrad, color:"#1A1A10", border:"none", borderRadius:small?8:12, padding:small?"5px 12px":"10px 20px", fontWeight:800, fontSize:small?13:15, cursor:"pointer", boxShadow:"0 3px 12px rgba(90,80,60,0.25)", ...style }}>
       {children}
     </button>
+  );
+}
+
+/* ── Add to Home Screen / Install button — shown on home screens ── */
+function InstallAppButton(){
+  const [showTip,setShowTip]=useState(false);
+  const isIOS=typeof navigator!=="undefined"&&/iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  return (
+    <div style={{padding:"0 16px 4px"}}>
+      <button onClick={async()=>{
+        const ok=await showInstallPrompt();
+        if(!ok)setShowTip(t=>!t);
+      }} style={{
+        width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+        padding:"11px",background:"rgba(90,120,72,0.08)",color:"#3A6020",
+        border:"1.5px dashed rgba(90,120,72,0.30)",borderRadius:100,
+        fontWeight:700,fontSize:13,cursor:"pointer",
+      }}>
+        📲 Add ThinkoGoals to Home Screen
+      </button>
+      {showTip&&(
+        <div style={{marginTop:8,background:C.wh,borderRadius:14,padding:"12px 14px",border:`1.5px solid ${C.ll}`,fontSize:13,lineHeight:1.6,color:C.txt,textAlign:"center"}}>
+          {isIOS
+            ?<>Tap <strong>Share</strong> then <strong>"Add to Home Screen"</strong> in Safari</>
+            :<>In Chrome: tap the <strong>⋮ menu</strong> then <strong>"Install app"</strong> or <strong>"Add to home screen"</strong></>
+          }
+          <button onClick={()=>setShowTip(false)} style={{display:"block",margin:"8px auto 0",background:"none",border:"none",color:C.soft,fontSize:12,cursor:"pointer"}}>✕ Close</button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -401,6 +450,10 @@ function Goals({data,setData,setScreen,onSendToWipeOut}){
         <div style={{fontFamily:"Georgia,serif",fontSize:28,fontWeight:700,color:"#1A1A10",letterSpacing:-0.5,display:"inline-flex",alignItems:"center",gap:10}}>
           Smart Goals <span style={{fontSize:22}}>♥</span>
         </div>
+      </div>
+
+      <div style={{padding:"12px 0 0"}}>
+        <InstallAppButton/>
       </div>
 
       <div style={{padding:"18px 20px 8px"}}>
