@@ -1020,14 +1020,24 @@ const CAT_EMOJI={
 };
 
 function ShoppingList({data,setData,setScreen}){
-  const [activeId,setActiveId]=useState(null);
-  const [showTemplates,setShowTemplates]=useState(true);
+  const [activeId,setActiveIdRaw]=useState(null);
+  const [showTemplates,setShowTemplates]=useState(false);
   const [customising,setCustomising]=useState(null);
   const [customItems,setCustomItems]=useState([]);
   const [custNewItem,setCustNewItem]=useState("");
   const [custListName,setCustListName]=useState("");
   const [custDrag,setCustDrag]=useState(null);
   const [dragShop,setDragShop]=useState(null);
+  const [lastUsedId,setLastUsedId]=useState(()=>{
+    try{return localStorage.getItem('thinko_shop_last')||null;}catch{return null;}
+  });
+  const setActiveId=id=>{
+    setActiveIdRaw(id);
+    if(id){
+      try{localStorage.setItem('thinko_shop_last',String(id));}catch{}
+      setLastUsedId(String(id));
+    }
+  };
   const shopTouchRef=useRef(null);
   const [templateOrder,setTemplateOrder]=useState(()=>{
     try{
@@ -1210,45 +1220,54 @@ function ShoppingList({data,setData,setScreen}){
           </button>
         </div>
 
-        {/* Hero */}
-        <div style={{textAlign:"center",padding:"24px 24px 20px",position:"relative",zIndex:1}}>
-          <div style={{fontSize:56,marginBottom:12,filter:"drop-shadow(0 4px 16px rgba(42,80,28,0.20))"}}>🛒</div>
-          <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:26,color:"#1A2810",marginBottom:6,letterSpacing:-0.5}}>
-            New shopping list
-          </div>
-          <div style={{fontSize:13,color:"rgba(42,60,28,0.60)",lineHeight:1.6,marginBottom:hasLists?18:0}}>
-            Pick a type — customise it before saving
-          </div>
-          {/* My lists button — centred, prominent */}
+        {/* Main content */}
+        <div style={{padding:"16px 16px 100px",position:"relative",zIndex:1}}>
+
+          {/* MOST RECENT LIST — always at very top of first screen */}
+          {lastUsedId&&data.find(l=>l.id===lastUsedId)&&(()=>{
+            const last=data.find(l=>l.id===lastUsedId);
+            const remaining=(last.items||[]).filter(i=>!i.done).length;
+            const total=(last.items||[]).length;
+            return(
+              <button onClick={()=>setActiveId(lastUsedId)}
+                style={{width:"100%",marginBottom:14,padding:"22px 20px",background:"linear-gradient(135deg,rgba(230,200,180,0.92) 0%,rgba(210,195,220,0.92) 35%,rgba(190,215,200,0.92) 70%,rgba(220,210,185,0.92) 100%)",border:"2px solid rgba(90,120,72,0.30)",borderRadius:24,cursor:"pointer",display:"flex",alignItems:"center",gap:16,boxShadow:"0 6px 28px rgba(42,80,28,0.18)"}}>
+                <div style={{fontSize:44,flexShrink:0}}>{last.icon||"🛒"}</div>
+                <div style={{flex:1,textAlign:"left"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#5A7040",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>📍 Continue shopping</div>
+                  <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:22,color:"#1A1A10",marginBottom:4}}>{last.name}</div>
+                  <div style={{fontSize:13,color:"#5A4A30",fontWeight:600}}>{remaining>0?`${remaining} of ${total} items still needed`:"All items ticked ✓"}</div>
+                </div>
+                <div style={{fontSize:24,color:"#5A7040",flexShrink:0}}>→</div>
+              </button>
+            );
+          })()}
+
+          {/* MY LISTS — second row */}
           {hasLists&&(
             <button onClick={()=>setShowTemplates(false)}
-              style={{
-                display:"inline-flex",alignItems:"center",gap:8,
-                background:"linear-gradient(135deg,rgba(230,200,180,0.92) 0%,rgba(210,195,220,0.92) 35%,rgba(190,215,200,0.92) 70%,rgba(220,210,185,0.92) 100%)",
-                border:"none",borderRadius:100,
-                padding:"13px 28px",
-                color:"#2A1A08",fontFamily:"Georgia,serif",fontWeight:700,fontSize:16,
-                cursor:"pointer",
-                boxShadow:"0 4px 18px rgba(58,80,38,0.35)",
-              }}>
-              <span>📋</span> My lists
+              style={{width:"100%",marginBottom:14,padding:"16px 18px",background:"linear-gradient(135deg,rgba(230,200,180,0.92) 0%,rgba(210,195,220,0.92) 35%,rgba(190,215,200,0.92) 70%,rgba(220,210,185,0.92) 100%)",border:"1.5px solid rgba(90,120,72,0.20)",borderRadius:20,cursor:"pointer",display:"flex",alignItems:"center",gap:14,boxShadow:"0 2px 12px rgba(42,80,28,0.08)"}}>
+              <div style={{fontSize:28,flexShrink:0}}>📋</div>
+              <div style={{flex:1,textAlign:"left"}}>
+                <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:16,color:"#1A2810"}}>My lists</div>
+                <div style={{fontSize:12,color:"rgba(42,60,28,0.55)",marginTop:2}}>{data.length} saved list{data.length!==1?"s":""}</div>
+              </div>
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style={{flexShrink:0}}><path d="M1 1l6 6-6 6" stroke="rgba(42,60,28,0.40)" strokeWidth="1.8" strokeLinecap="round"/></svg>
             </button>
           )}
-        </div>
 
-        {/* Template grid */}
-        <div style={{padding:"0 16px 100px",position:"relative",zIndex:1}}>
-
-          {/* Create your own — first, above templates */}
+          {/* CREATE YOUR OWN — smaller */}
           <button onClick={()=>pickTemplate({id:"blank",icon:"✏️",name:"",color:"#5A7848",items:[]})}
-            style={{width:"100%",marginBottom:14,padding:"16px 18px",background:"linear-gradient(135deg,rgba(230,200,180,0.92) 0%,rgba(210,195,220,0.92) 35%,rgba(190,215,200,0.92) 70%,rgba(220,210,185,0.92) 100%)",backdropFilter:"blur(12px)",border:"1.5px dashed rgba(90,120,72,0.38)",borderRadius:22,cursor:"pointer",display:"flex",alignItems:"center",gap:14,boxShadow:"0 2px 12px rgba(42,80,28,0.08)"}}>
-            <div style={{width:46,height:46,borderRadius:16,background:"rgba(90,120,72,0.10)",border:"1.5px dashed rgba(90,120,72,0.28)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>✏️</div>
-            <div style={{textAlign:"left",flex:1}}>
-              <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:15,color:"#1A2810"}}>Create your own list</div>
-              <div style={{fontSize:12,color:"rgba(42,60,28,0.50)",marginTop:2}}>Name it and add items from scratch</div>
+            style={{width:"100%",marginBottom:14,padding:"13px 16px",background:"rgba(255,255,255,0.45)",backdropFilter:"blur(12px)",border:"1.5px dashed rgba(90,120,72,0.35)",borderRadius:16,cursor:"pointer",display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 8px rgba(42,80,28,0.06)"}}>
+            <div style={{fontSize:20,flexShrink:0}}>✏️</div>
+            <div style={{flex:1,textAlign:"left"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#1A2810"}}>Create your own list</div>
+              <div style={{fontSize:11,color:"rgba(42,60,28,0.50)",marginTop:1}}>Name it and add items from scratch</div>
             </div>
             <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style={{flexShrink:0}}><path d="M1 1l6 6-6 6" stroke="rgba(42,60,28,0.30)" strokeWidth="1.8" strokeLinecap="round"/></svg>
           </button>
+
+          {/* TEMPLATE GRID — below */}
+          <div style={{fontSize:11,fontWeight:700,color:"rgba(42,60,28,0.50)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Or start from a template</div>
 
           {/* Templates */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -1321,6 +1340,25 @@ function ShoppingList({data,setData,setScreen}){
             </button>
           </div>
         )}
+        {/* MOST RECENT LIST */}
+        {lastUsedId&&data.find(l=>l.id===lastUsedId)&&(()=>{
+          const last=data.find(l=>l.id===lastUsedId);
+          const remaining=(last.items||[]).filter(i=>!i.done).length;
+          const col=last.color||"#5A7848";
+          return(
+            <button onClick={()=>setActiveId(lastUsedId)}
+              style={{width:"100%",marginBottom:20,padding:"22px 20px",background:"linear-gradient(135deg,rgba(230,200,180,0.92) 0%,rgba(210,195,220,0.92) 35%,rgba(190,215,200,0.92) 70%,rgba(220,210,185,0.92) 100%)",border:"3px solid "+col,borderRadius:26,cursor:"pointer",boxShadow:"0 8px 32px "+col+"50",textAlign:"left",display:"flex",alignItems:"center",gap:16}}>
+              <div style={{fontSize:44,flexShrink:0}}>{last.icon||"🛒"}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12,fontWeight:700,color:col,marginBottom:4}}>⭐ Most recent list</div>
+                <div style={{fontFamily:"Georgia,serif",fontWeight:800,fontSize:24,color:"#1A1A10",marginBottom:4}}>{last.name}</div>
+                <div style={{fontSize:13,color:"#5A4A30",fontWeight:600}}>{remaining>0?`${remaining} items needed`:"All done ✓"}</div>
+              </div>
+              <div style={{fontSize:30,color:col}}>→</div>
+            </button>
+          );
+        })()}
+
         {/* List cards — big, beautiful, prominent */}
         {orderedLists.map((list,i)=>{
           const remaining=list.items.filter(it=>!it.done).length;
@@ -1337,27 +1375,23 @@ function ShoppingList({data,setData,setScreen}){
               onClick={()=>setActiveId(list.id)}
               style={{
                 background:"linear-gradient(135deg,rgba(230,200,180,0.92) 0%,rgba(210,195,220,0.92) 35%,rgba(190,215,200,0.92) 70%,rgba(220,210,185,0.92) 100%)",
-                backdropFilter:"blur(16px)",
-                borderRadius:26,
-                marginBottom:14,
+                borderRadius:18,
+                marginBottom:10,
                 overflow:"hidden",
                 cursor:"pointer",
-                border:"1.5px solid "+col+"30",
-                boxShadow:"0 6px 28px "+col+"20, 0 1px 0 rgba(255,255,255,0.9) inset",
+                border:"1.5px solid "+col+"40",
+                boxShadow:"0 3px 14px "+col+"18",
                 opacity:dragShop===list.id?0.5:1,
-                transition:"transform 0.12s, box-shadow 0.12s",
               }}>
               {/* Colour top bar */}
-              <div style={{height:6,background:"linear-gradient(90deg,"+col+","+col+"aa)"}}/>
-              <div style={{padding:"18px 20px",display:"flex",alignItems:"center",gap:16}}>
-                {/* Big icon circle */}
+              <div style={{height:4,background:col}}/>
+              <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+                {/* Icon */}
                 <div style={{
-                  width:64,height:64,borderRadius:22,
-                  background:"linear-gradient(135deg,"+col+"30,"+col+"12)",
-                  border:"2.5px solid "+col+"40",
+                  width:40,height:40,borderRadius:12,
+                  background:col+"20",
                   display:"flex",alignItems:"center",justifyContent:"center",
-                  fontSize:30,flexShrink:0,
-                  boxShadow:"0 3px 14px "+col+"25",
+                  fontSize:22,flexShrink:0,
                 }}>{list.icon||"🛒"}</div>
                 {/* Text */}
                 <div style={{flex:1,minWidth:0}}>
@@ -1395,6 +1429,31 @@ function ShoppingList({data,setData,setScreen}){
           );
         })}
         {data.length>1&&<div style={{textAlign:"center",fontSize:11,color:"rgba(60,50,30,0.35)",marginTop:4}}>⠿ Hold and drag to reorder</div>}
+
+        {/* Templates section below lists */}
+        <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid rgba(90,80,60,0.10)"}}>
+          <div style={{fontSize:12,fontWeight:700,color:"rgba(42,60,28,0.55)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Start from a template</div>
+          <button onClick={()=>pickTemplate({id:"blank",icon:"✏️",name:"",color:"#5A7848",items:[]})}
+            style={{width:"100%",marginBottom:10,padding:"11px 14px",background:"rgba(255,255,255,0.5)",border:"1.5px dashed rgba(90,120,72,0.35)",borderRadius:14,cursor:"pointer",display:"flex",alignItems:"center",gap:10,boxShadow:"0 2px 8px rgba(42,80,28,0.06)"}}>
+            <span style={{fontSize:18}}>✏️</span>
+            <div style={{flex:1,textAlign:"left"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#1A2810"}}>Create your own list</div>
+              <div style={{fontSize:11,color:"rgba(42,60,28,0.45)"}}>Name it and add items from scratch</div>
+            </div>
+            <svg width="7" height="12" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="rgba(42,60,28,0.30)" strokeWidth="1.8" strokeLinecap="round"/></svg>
+          </button>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {ALL_TEMPLATES.map((t,i)=>(
+              <button key={t.id} onClick={()=>pickTemplate({...t,items:t.items||[]})}
+                style={{background:"linear-gradient(135deg,rgba(230,200,180,0.92) 0%,rgba(210,195,220,0.92) 35%,rgba(190,215,200,0.92) 70%,rgba(220,210,185,0.92) 100%)",border:"1.5px solid rgba(255,255,255,0.90)",borderRadius:18,padding:"14px 10px 12px",cursor:"pointer",textAlign:"center",position:"relative",overflow:"hidden",boxShadow:"0 3px 14px rgba(42,80,28,0.10)"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:t.color,borderRadius:"18px 18px 0 0"}}/>
+                <div style={{fontSize:28,marginBottom:6,marginTop:2}}>{t.icon}</div>
+                <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:13,color:"#1A2810",marginBottom:2}}>{t.name}</div>
+                <div style={{fontSize:9,color:"rgba(42,60,28,0.45)",lineHeight:1.4}}>{t.subtitle||t.items.slice(0,3).join(", ")+(t.items.length>3?"…":"")}</div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
