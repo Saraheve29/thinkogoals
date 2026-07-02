@@ -1787,7 +1787,7 @@ const sendMealToShop=(meal,label)=>{
 
           {/* Ideas grid */}
           {recipes.length===0&&!addingRecipe&&(
-            <div style={{textAlign:"center",padding:"24px 20px",color:"#1A1A10",background:"rgba(255,255,255,0.85)",borderRadius:16,padding:"16px"}}>
+            <div style={{textAlign:"center",padding:"20px 16px",color:"#1A1A10",background:"rgba(255,255,255,0.85)",borderRadius:16}}>
               <div style={{fontSize:40,marginBottom:8}}>🍽️</div>
               <div style={{fontFamily:"Georgia,serif",fontWeight:700,fontSize:16,color:"#1A1A10",marginBottom:4}}>No ideas yet</div>
               <div style={{fontSize:13,color:"#1A1A10",fontWeight:600}}>Save recipes, Pinterest pins and photos here for inspiration.</div>
@@ -2207,7 +2207,11 @@ function Housework({setScreen}){
   const [dismissed,setDismissed]=useState(()=>load('hw_dismissed',[]));
   const saveDismissed=d=>{setDismissed(d);save('hw_dismissed',d);};
   const [customChores,setCustomChores]=useState(()=>load('hw_custom_chores',{})); // {zoneId:[names]}
-  const saveCustomChores=c=>{setCustomChores(c);save('hw_custom_chores',c);};
+  const saveCustomChores=c=>{
+    // dedup each zone's list on every save
+    const deduped=Object.fromEntries(Object.entries(c).map(([k,v])=>[k,[...new Set(v)]]));
+    setCustomChores(deduped);save('hw_custom_chores',deduped);
+  };
   const [newChoreName,setNewChoreName]=useState('');
   const [showTemplates,setShowTemplates]=useState(false);
   const [dragTask,setDragTask]=useState(null);
@@ -2749,227 +2753,35 @@ function Housework({setScreen}){
                 setDragTask(null);setDragOver(null);
               }}
               onDragEnd={()=>{setDragTask(null);setDragOver(null);}}
-              style={{background:dragOver===t.id?'rgba(90,120,72,0.10)':MULTI,borderRadius:14,padding:'12px 14px',marginBottom:8,display:'flex',alignItems:'center',gap:10,boxShadow:'0 2px 8px rgba(0,0,0,0.06)',border:(dragOver===t.id?'1.5px solid rgba(90,120,72,0.30)':'1.5px solid transparent'),cursor:'grab'}}>
-              <div style={{width:28,height:28,borderRadius:8,background:SCORE_C[t.score]||'#5A7848',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13,flexShrink:0}}>{i+1}</div>
-              <div style={{fontWeight:700,fontSize:14,color:'#1A1A10',flex:1}}>{t.name}</div>
-              <div style={{fontSize:14,color:'#A09080',flexShrink:0}}>⠿</div>
-            </div>
-          ))}
-          <button onClick={()=>{setView('zone');setShowTemplates(false);}} style={{width:'100%',marginTop:8,padding:'14px',background:MULTI,color:'#2A3820',border:'1.5px solid rgba(90,120,72,0.25)',borderRadius:100,fontFamily:'Georgia,serif',fontWeight:700,fontSize:16,cursor:'pointer',boxShadow:'0 4px 18px rgba(90,120,72,0.20)'}}>
-            ✨ Let's get started!
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── ZONE DETAIL ──
-  if(view==='zone'&&activeZone){
-    const z=zones?.find(z=>z.id===activeZone);
-    const zt=getZT(activeZone);
-    const todo=zt.filter(t=>!t.done).sort((a,b)=>a.score-b.score);
-    const done=zt.filter(t=>t.done);
-    const allPresetsForZone=[...(PRESETS[activeZone]||[]),...(customChores[activeZone]||[])];
-    const availPresets=allPresetsForZone.filter(p=>!zt.some(t=>t.name.toLowerCase()===p.toLowerCase())&&!dismissed.includes(p));
-    return(
-      <div style={{minHeight:'100vh',background:'transparent',fontFamily:"'Segoe UI',sans-serif",paddingBottom:90}}>
-        {/* Header */}
-        <div style={{background:MULTI,padding:'14px 18px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(90,80,60,0.08)',position:'sticky',top:0,zIndex:50}}>
-          <button onClick={()=>{setView('hub');}} style={{background:'none',border:'none',cursor:'pointer',width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            <svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9l8 8" stroke="#1A1A10" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <div style={{flex:1,fontFamily:'Georgia,serif',fontWeight:700,fontSize:19,color:'#1A1A10'}}>{z?.icon} {z?.name}</div>
-        </div>
-        <div style={{padding:'14px 16px'}}>
-
-          {/* A vs B button + Borrow task */}
-          <div style={{display:'flex',gap:8,marginBottom:8}}>
-            <button onClick={startAvB}
-              style={{flex:1,background:MULTI,color:'#2A3820',border:'1.5px solid rgba(90,120,72,0.25)',borderRadius:100,padding:'10px',fontSize:13,fontFamily:'Georgia,serif',fontWeight:700,cursor:'pointer',boxShadow:'0 4px 18px rgba(90,120,72,0.20)'}}>
-              🎯 A vs B — rank chores
-            </button>
-          </div>
-          {borrowedIds.length>0&&(
-            <div style={{fontSize:11,color:'#5A7040',marginBottom:8,fontWeight:600,textAlign:'center'}}>
-              🔄 {borrowedIds.length} chore{borrowedIds.length>1?'s':''} borrowed for this round — will go back after ranking
-            </div>
-          )}
-
-          {/* Add task */}
-          <div style={{background:MULTI,borderRadius:16,padding:'12px',marginBottom:12,boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
-            <div style={{display:'flex',gap:8,marginBottom:8}}>
-              <input value={newTask} onChange={e=>setNewTask(e.target.value)}
-                onKeyDown={e=>{if(e.key==='Enter'&&newTask.trim()){addTask(activeZone,newTask.trim(),3,'');setNewTask('');}}}
-                placeholder="Add a chore…"
-                style={{flex:1,padding:'9px 13px',borderRadius:11,border:'1.5px solid rgba(90,120,72,0.25)',fontSize:14,color:'#1A1A10',background:'rgba(255,255,255,0.9)',outline:'none'}}/>
-              <button onClick={()=>{if(newTask.trim()){addTask(activeZone,newTask.trim(),3,'');setNewTask('');}}}
-                style={{background:MULTI,color:'#2A3820',border:'1.5px solid rgba(90,120,72,0.25)',borderRadius:11,padding:'9px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Add</button>
-            </div>
-            <button onClick={()=>setShowBorrow(!showBorrow)}
-              style={{width:'100%',padding:'8px',marginBottom:8,background:'rgba(255,255,255,0.6)',border:'1px solid rgba(90,120,72,0.20)',borderRadius:10,fontSize:12,fontWeight:700,color:'#3A5828',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <span>🔄 Borrow a chore from another zone</span><span>{showBorrow?'▲':'▼'}</span>
-            </button>
-            {showBorrow&&(
-              <div style={{marginBottom:8}}>
-                {(zones||[]).filter(z=>z.id!==activeZone).length===0&&(
-                  <div style={{fontSize:12,color:'#5A4A30',fontWeight:600,textAlign:'center',padding:'8px',background:'rgba(255,255,255,0.55)',borderRadius:10}}>No other zones set up yet</div>
-                )}
-                {(zones||[]).filter(z=>z.id!==activeZone).map(z=>{
-                  // Combine real tasks already added AND saved chores not yet added, for that zone
-                  const realTasks=getZT(z.id).filter(t=>!t.done);
-                  const realNames=realTasks.map(t=>t.name.toLowerCase());
-                  const savedForZone=[...(PRESETS[z.id]||[]),...(customChores[z.id]||[])]
-                    .filter(name=>!realNames.includes(name.toLowerCase()));
-                  const isOpen=borrowZone===z.id;
-                  const totalCount=realTasks.length+savedForZone.length;
-                  return(
-                    <div key={z.id} style={{marginBottom:6,borderRadius:12,overflow:'hidden',border:'1px solid rgba(90,120,72,0.15)'}}>
-                      <button onClick={()=>setBorrowZone(isOpen?null:z.id)}
-                        style={{width:'100%',padding:'9px 12px',background:'rgba(255,255,255,0.55)',border:'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}}>
-                        <span style={{fontSize:13,fontWeight:700,color:'#3A5828'}}>{z.icon} {z.name}</span>
-                        <span style={{fontSize:11,color:'#8A8070'}}>{totalCount} chore{totalCount!==1?'s':''} {isOpen?'▲':'▼'}</span>
-                      </button>
-                      {isOpen&&(
-                        <div style={{padding:'6px 10px',background:'rgba(255,255,255,0.35)',maxHeight:220,overflowY:'auto'}}>
-                          {totalCount===0&&<div style={{fontSize:12,color:'#8A8070',textAlign:'center',padding:'8px'}}>Nothing to borrow from {z.name} yet</div>}
-                          {realTasks.filter(t=>!borrowedIds.some(b=>b.taskId===t.id)).map(t=>(
-                            <div key={t.id} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 0',borderBottom:'1px solid rgba(90,80,60,0.06)'}}>
-                              <div style={{flex:1,fontSize:13,color:'#1A1A10'}}>{t.name}</div>
-                              <button onClick={()=>setBorrowedIds(b=>[...b,{taskId:t.id,fromZone:z.id}])}
-                                style={{background:'rgba(90,120,72,0.10)',border:'1px solid rgba(90,120,72,0.25)',borderRadius:7,padding:'4px 9px',fontSize:10,fontWeight:700,color:'#3A5828',cursor:'pointer'}}>+ Borrow</button>
-                            </div>
-                          ))}
-                          {savedForZone.length>0&&(
-                            <div style={{fontSize:10,fontWeight:700,color:'#8A8070',padding:'6px 0 2px',textTransform:'uppercase',letterSpacing:0.5}}>📋 Saved chores (not added yet)</div>
-                          )}
-                          {savedForZone.map(name=>(
-                            <div key={name} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 0',borderBottom:'1px solid rgba(90,80,60,0.06)'}}>
-                              <div style={{flex:1,fontSize:13,color:'#1A1A10'}}>{name}</div>
-                              <button onClick={()=>{
-                                  // Add the chore into its real zone first, then borrow it
-                                  const newTaskObj={id:Date.now()+Math.random(),name,score:3,reason:'',done:false};
-                                  saveTasks(prevTasks=>({...prevTasks,[z.id]:[...(prevTasks[z.id]||[]),newTaskObj]}));
-                                  setBorrowedIds(b=>[...b,{taskId:newTaskObj.id,fromZone:z.id}]);
-                                }}
-                                style={{background:'rgba(90,120,72,0.10)',border:'1px solid rgba(90,120,72,0.25)',borderRadius:7,padding:'4px 9px',fontSize:10,fontWeight:700,color:'#3A5828',cursor:'pointer'}}>+ Borrow</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <button onClick={()=>setShowTemplates(!showTemplates)}
-              style={{width:'100%',padding:'8px',background:'rgba(255,255,255,0.6)',border:'1px solid rgba(90,120,72,0.20)',borderRadius:10,fontSize:12,fontWeight:700,color:'#3A5828',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <span>📋 Saved Chores</span><span>{showTemplates?'▲':'▼'}</span>
-            </button>
-            {showTemplates&&(
-              <div style={{marginTop:8,maxHeight:280,overflowY:'auto'}}>
-                {/* Add a new saved chore */}
+              style={{background:dragOver===t.id?'rgba(90,120,72,0.10)':MULTI,borderRadius:14,padding:'11px 13px',marginBottom:8,boxShadow:'0 2px 8px rgba(0,0,0,0.05)',border:(dragOver===t.id?'1.5px solid rgba(90,120,72,0.30)':'1.5px solid transparent')}}>
+              {/* Chore name — full width on top, tap to edit */}
+              {editingChoreId===t.id?(
                 <div style={{display:'flex',gap:6,marginBottom:8}}>
-                  <input value={newChoreName} onChange={e=>setNewChoreName(e.target.value)}
+                  <input value={editChoreText} onChange={e=>setEditChoreText(e.target.value)}
                     onKeyDown={e=>{
-                      if(e.key==='Enter'&&newChoreName.trim()){
-                        const nc={...customChores,[activeZone]:[...(customChores[activeZone]||[]),newChoreName.trim()]};
-                        saveCustomChores(nc);setNewChoreName('');
-                      }
+                      if(e.key==='Enter'){if(editChoreText.trim())editChore(activeZone,t.id,editChoreText.trim());setEditingChoreId(null);}
+                      if(e.key==='Escape')setEditingChoreId(null);
                     }}
-                    placeholder="Save a new chore for next time…"
-                    style={{flex:1,padding:'7px 11px',borderRadius:9,border:'1.5px solid rgba(90,120,72,0.20)',fontSize:12,color:'#1A1A10',background:'rgba(255,255,255,0.85)',outline:'none'}}/>
-                  <button onClick={()=>{
-                      if(newChoreName.trim()){
-                        const nc={...customChores,[activeZone]:[...(customChores[activeZone]||[]),newChoreName.trim()]};
-                        saveCustomChores(nc);setNewChoreName('');
-                      }
-                    }} style={{background:MULTI,border:'1px solid rgba(90,120,72,0.25)',borderRadius:9,padding:'7px 12px',fontSize:12,fontWeight:700,color:'#3A5828',cursor:'pointer'}}>Save</button>
+                    autoFocus
+                    style={{flex:1,fontWeight:700,fontSize:15,padding:'6px 10px',borderRadius:10,border:'1.5px solid rgba(90,120,72,0.30)',color:'#1A1A10',outline:'none'}}/>
+                  <button onClick={()=>{if(editChoreText.trim())editChore(activeZone,t.id,editChoreText.trim());setEditingChoreId(null);}}
+                    style={{background:'#5A7848',color:'#fff',border:'none',borderRadius:10,padding:'6px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Save</button>
                 </div>
-                {availPresets.length===0
-                  ?<div style={{fontSize:12,color:'#8A8070',textAlign:'center',padding:'8px'}}>All saved chores added ✓</div>
-                  :availPresets.map(p=>{
-                    const isCustom=(customChores[activeZone]||[]).includes(p);
-                    return(
-                    <div key={p} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 0',borderBottom:'1px solid rgba(90,80,60,0.06)'}}>
-                      <div style={{flex:1,fontSize:13,color:'#1A1A10'}}>{p}{isCustom&&<span style={{fontSize:9,color:'#5A7040',marginLeft:5}}>★</span>}</div>
-                      <button onClick={()=>addTask(activeZone,p,1,'Urgent')} style={{background:'rgba(224,48,32,0.10)',border:'1px solid rgba(224,48,32,0.25)',borderRadius:7,padding:'4px 7px',fontSize:10,fontWeight:700,color:'#C03020',cursor:'pointer'}}>🔴</button>
-                      <button onClick={()=>addTask(activeZone,p,3,'Normal')} style={{background:MULTI,border:'1px solid rgba(90,120,72,0.25)',borderRadius:7,padding:'4px 7px',fontSize:10,fontWeight:700,color:'#3A5828',cursor:'pointer'}}>Normal</button>
-                      <button onClick={()=>addTask(activeZone,p,5,'Later')} style={{background:'rgba(72,120,168,0.10)',border:'1px solid rgba(72,120,168,0.25)',borderRadius:7,padding:'4px 7px',fontSize:10,fontWeight:700,color:'#2A5880',cursor:'pointer'}}>Later</button>
-                      {isCustom?(
-                        <button onClick={()=>{
-                            const nc={...customChores,[activeZone]:(customChores[activeZone]||[]).filter(x=>x!==p)};
-                            saveCustomChores(nc);
-                          }} title="Delete this saved chore" style={{background:'rgba(192,57,43,0.08)',border:'1px solid rgba(192,57,43,0.18)',borderRadius:7,padding:'4px 7px',fontSize:10,fontWeight:700,color:'#c0392b',cursor:'pointer'}}>🗑</button>
-                      ):(
-                        <button onClick={()=>saveDismissed([...dismissed,p])} title="Hide this one" style={{background:'rgba(90,80,60,0.08)',border:'1px solid rgba(90,80,60,0.15)',borderRadius:7,padding:'4px 7px',fontSize:10,fontWeight:700,color:'#8A8070',cursor:'pointer'}}>✕</button>
-                      )}
-                    </div>
-                  );})
-                }
-              </div>
-            )}
-          </div>
-
-          {/* Task list */}
-          {todo.length===0&&done.length===0&&(
-            <div style={{textAlign:'center',padding:'30px 20px',color:'#5A4A30',background:'rgba(255,255,255,0.55)',borderRadius:20}}>
-              <div style={{fontSize:40,marginBottom:8}}>{z?.icon}</div>
-              <div style={{fontFamily:'Georgia,serif',fontSize:15,marginBottom:12,fontWeight:600}}>No chores yet — add one above or use Saved Chores!</div>
-            </div>
-          )}
-
-          {todo.length>0&&<div style={{fontSize:11,color:'#5A4A30',marginBottom:8,fontWeight:700,background:'rgba(255,255,255,0.55)',borderRadius:8,padding:'4px 10px',display:'inline-block'}}>⠿ Drag to reorder</div>}
-
-          {todo.map((t,ti)=>(
-            <div key={t.id}
-              draggable
-              onDragStart={()=>setDragTask(t.id)}
-              onDragOver={e=>{e.preventDefault();setDragOver(t.id);}}
-              onDrop={e=>{
-                e.preventDefault();
-                if(!dragTask||dragTask===t.id){setDragTask(null);setDragOver(null);return;}
-                const list=[...getZT(activeZone)];
-                const from=list.findIndex(x=>x.id===dragTask),to=list.findIndex(x=>x.id===t.id);
-                list.splice(to,0,...list.splice(from,1));
-                saveTasks(prev=>({...prev,[activeZone]:list}));
-                setDragTask(null);setDragOver(null);
-              }}
-              onDragEnd={()=>{setDragTask(null);setDragOver(null);}}
-              style={{background:dragOver===t.id?'rgba(90,120,72,0.10)':MULTI,borderRadius:14,padding:'11px 13px',marginBottom:8,boxShadow:'0 2px 8px rgba(0,0,0,0.05)',display:'flex',alignItems:'flex-start',gap:9,border:(dragOver===t.id?'1.5px solid rgba(90,120,72,0.30)':'1.5px solid transparent'),cursor:'grab'}}>
-              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:5,flexShrink:0}}>
-                <div style={{width:30,height:30,borderRadius:8,background:SCORE_C[t.score],display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:12,fontWeight:800}}>{ti+1}</div>
-                <div style={{position:'relative'}}>
+              ):(
+                <div onClick={()=>{setEditChoreText(t.name);setEditingChoreId(t.id);}} style={{fontWeight:700,fontSize:16,lineHeight:1.4,color:'#1A1A10',cursor:'pointer',marginBottom:8,overflowWrap:'break-word'}}>{t.name}</div>
+              )}
+              {/* Controls row — number, drag, colour, actions */}
+              <div style={{display:'flex',alignItems:'center',gap:9}}>
+                <div style={{width:28,height:28,borderRadius:8,background:SCORE_C[t.score],display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:12,fontWeight:800,flexShrink:0}}>{ti+1}</div>
+                <div style={{cursor:'grab',color:'rgba(90,120,72,0.35)',fontSize:18,lineHeight:1,padding:'2px 6px',letterSpacing:1,touchAction:'none',flexShrink:0}}>⠿</div>
+                <div style={{position:'relative',flexShrink:0}}>
                   <button onClick={()=>setChorePickerOpenId(chorePickerOpenId===t.id?null:t.id)}
-                    title="Change colour"
-                    style={{width:20,height:20,borderRadius:'50%',cursor:'pointer',padding:0,
-                      background:swatchById(t.color).fill,
-                      border:`2.5px solid ${swatchById(t.color).border}`,
-                      boxShadow:'0 1px 4px rgba(0,0,0,0.12)'}}/>
+                    style={{width:22,height:22,borderRadius:'50%',cursor:'pointer',padding:0,background:swatchById(t.color).fill,border:`2.5px solid ${swatchById(t.color).border}`,boxShadow:'0 1px 4px rgba(0,0,0,0.12)'}}/>
                   {chorePickerOpenId===t.id&&<ColourPicker current={t.color} onChange={c=>colorChore(activeZone,t.id,c)} onClose={()=>setChorePickerOpenId(null)}/>}
                 </div>
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                {editingChoreId===t.id?(
-                  <div style={{display:'flex',gap:6,marginBottom:4}}>
-                    <input value={editChoreText} onChange={e=>setEditChoreText(e.target.value)}
-                      onKeyDown={e=>{
-                        if(e.key==='Enter'){if(editChoreText.trim())editChore(activeZone,t.id,editChoreText.trim());setEditingChoreId(null);}
-                        if(e.key==='Escape')setEditingChoreId(null);
-                      }}
-                      autoFocus
-                      style={{flex:1,fontWeight:700,fontSize:14,padding:'4px 8px',borderRadius:8,border:'1.5px solid rgba(90,120,72,0.30)',color:'#1A1A10',outline:'none'}}/>
-                    <button onClick={()=>{if(editChoreText.trim())editChore(activeZone,t.id,editChoreText.trim());setEditingChoreId(null);}}
-                      style={{background:'#5A7848',color:'#fff',border:'none',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Save</button>
-                  </div>
-                ):(
-                  <div onClick={()=>{setEditChoreText(t.name);setEditingChoreId(t.id);}} style={{fontWeight:700,fontSize:14,color:'#1A1A10',cursor:'pointer'}}>{t.name}</div>
-                )}
-                <div style={{fontSize:10,color:SCORE_C[t.score],fontWeight:600}}>{SCORE_L[t.score]}</div>
-                {t.reason&&<div style={{fontSize:10,color:'#8A8070'}}>{t.reason}</div>}
-              </div>
-              <div style={{display:'flex',gap:4,flexShrink:0}}>
-                <button onClick={()=>tickDone(activeZone,t.id)} style={{background:MULTI,border:'1.5px solid rgba(90,120,72,0.25)',borderRadius:7,padding:'5px 8px',fontSize:11,fontWeight:700,color:'#3A5828',cursor:'pointer'}}>✓</button>
-                <button onClick={()=>delTask(activeZone,t.id)} style={{background:'rgba(200,80,60,0.08)',border:'1.5px solid rgba(200,80,60,0.15)',borderRadius:7,padding:'5px 8px',fontSize:11,fontWeight:700,color:'#C04030',cursor:'pointer'}}>✕</button>
+                <div style={{flex:1}}/>
+                <button onClick={()=>tickDone(activeZone,t.id)} style={{background:MULTI,border:'1.5px solid rgba(90,120,72,0.25)',borderRadius:9,width:32,height:32,fontSize:15,fontWeight:700,color:'#3A5828',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✓</button>
+                <button onClick={()=>delTask(activeZone,t.id)} style={{background:'rgba(200,80,60,0.08)',border:'1.5px solid rgba(200,80,60,0.15)',borderRadius:9,width:32,height:32,fontSize:13,fontWeight:700,color:'#C04030',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
               </div>
             </div>
           ))}
